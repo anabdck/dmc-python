@@ -2,8 +2,8 @@ import numpy as np
 import cvxopt as cp
 
 
-class DMC:
-    def __init__(self, N1=1, N2=10, Nu=5, Nss=10, lamda=0.5, T_s=1, y0 = 0, model=None):
+class BaseController:
+    def __init__(self, N1=1, N2=10, Nu=5, Nss=10, lamda=0.5, T_s=1, y0 = 0, step_response_coeffs=None):
 
         self.N1 = N1
         self.N2 = N2
@@ -12,7 +12,7 @@ class DMC:
         self.Nss = Nss
         self.lamda = lamda
 
-        self.model = model
+        self.step_response_coeffs = step_response_coeffs
 
         self.T_s = T_s
         self.y0 = y0
@@ -27,10 +27,15 @@ class DMC:
         self.last_u = 0
         self.k = 0
 
-        self.init_matrices()
+        self.G = self.set_G()
+        self.g = self.set_g()
+        self.Qu = self.set_Qu()
+        self.Hqp = self.set_Hqp()
+        
+        # self.update_f(self.y0)
 
     def set_G(self):
-        m = self.model
+        m = self.step_response_coeffs
         m[-1] = 0
         # np.hstack((m, 0))
         # print(m[-1])
@@ -48,7 +53,7 @@ class DMC:
         return G
     
     def set_g(self):
-        g = np.array([self.model[:self.Nss]]).T
+        g = np.array([self.step_response_coeffs[:self.Nss]]).T
         return g
     
     def set_Qu(self):
@@ -60,37 +65,19 @@ class DMC:
         Hqp = 2*(self.G.T@self.G + self.Qu)
         return Hqp
     
-    def init_hat_y0(self):
-        hat_y0 = self.y0*np.ones((self.Nss, 1))
-        # hat_y0[0,0] = self.model[0] # considerando que o primeiro elemento é o valor da saída do sistema em t=0
-        return hat_y0
-    
-    def update_hat_y0(self):
-        self.hat_y0 = self.hat_y0 + self.g*self.last_Delta_u[0].flatten()[0]
-        self.hat_y0_0 = self.hat_y0[0]
-        self.hat_y0 = np.vstack((self.hat_y0[1:], self.hat_y0[-1])) # 
-            
-    def update_f(self, y):
-        self.f = np.array([self.hat_y0[self.N1:self.N2+1,0]]).T + (y - self.hat_y0_0.flatten()[0])
-        
-
-    def update_fqp(self, r):
-        
-        self.fqp = -2*self.G.T@(r - self.f)
-         
-    def init_matrices(self):
-        self.G = self.set_G()
-        self.g = self.set_g()
-        self.Qu = self.set_Qu()
-        self.Hqp = self.set_Hqp()
-        self.hat_y0 = self.init_hat_y0()
-        # self.update_f(self.y0)
-
     def update_matrices(self, y, r):
-
         self.update_hat_y0()
         self.update_f(y)
         self.update_fqp(r)
+
+    def update_hat_y0(self):
+        return None
+
+    def update_f(self, y):
+        return None
+
+    def update_fqp(self, r):
+        return None
 
     def generate_constraints(self, constraints):
 
@@ -155,7 +142,7 @@ class DMC:
         # # J = 0.5*Delta_u.T@self.Hqp@Delta_u + self.fqp.T@Delta_u
         # return Delta_u
            
-    def get_u(self, y, r, constraints=None):
+    def get_du(self, y, r, constraints=None):
 
         if isinstance(r, (int, float)):
             r = np.array([[r]*self.N]).T
