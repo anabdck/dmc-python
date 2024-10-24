@@ -1,3 +1,3 @@
-# dmc-python
-
-This repository implements Dynamic Matrix Control (DMC), a model predictive control algorithm based on the book "Controle preditivo baseado em modelo" by Normey-Rico et al.
+# mpc-python
+ 
+This repository implements two Model Predictive Control (MPC) algorithms, Dynamic Matrix Control (DMC) and Generalized Predictive Control (GPC), based on the book "Controle Preditivo Baseado em Modelo" by Normey-Rico et al. 🛸
